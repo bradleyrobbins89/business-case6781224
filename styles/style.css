@@ -398,6 +398,7 @@ a:hover {
 }
 .form-modal .modal-content {
     min-height: 54vh;
+    padding: 18px;
 }
 .form-modal .modal-body {
  display: flex;
